@@ -1,36 +1,57 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Google OAuth Demo
 
-## Getting Started
+一个基于 Next.js App Router + `next-auth` 的 Google 登录示例。
 
-First, run the development server:
+## 本地运行
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
+pnpm install
+cp .env.example .env.local
 pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+默认打开 `http://localhost:3000`。
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## 需要手工配置的内容
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+1. 打开 Google Cloud Console。
+2. 创建或选择一个项目。
+3. 进入 `APIs & Services` -> `OAuth consent screen`，完成应用名称、测试用户等基础配置。
+4. 进入 `Credentials` -> `Create Credentials` -> `OAuth client ID`。
+5. 应用类型选择 `Web application`。
+6. 在 `Authorized redirect URIs` 中添加：
 
-## Learn More
+```text
+http://localhost:3000/api/auth/callback/google
+```
 
-To learn more about Next.js, take a look at the following resources:
+7. 复制生成的 `Client ID` 和 `Client Secret`。
+8. 填写 `.env.local`：
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+```bash
+GOOGLE_CLIENT_ID=你的_client_id
+GOOGLE_CLIENT_SECRET=你的_client_secret
+NEXTAUTH_SECRET=自己生成的长随机字符串
+NEXTAUTH_URL=http://localhost:3000
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+可以用下面命令生成 `NEXTAUTH_SECRET`：
 
-## Deploy on Vercel
+```bash
+openssl rand -base64 32
+```
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## 功能说明
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- 首页会显示当前是否已登录。
+- 登录成功后，页面会展示 Google 返回的基础用户信息。
+- `GET /api/demo/session` 是一个受保护的示例接口。
+- 未登录访问 `/api/demo/session` 会返回 `401`。
+
+## 关键文件
+
+- `lib/auth.ts`：`next-auth` 配置。
+- `app/api/auth/[...nextauth]/route.ts`：认证路由。
+- `app/api/demo/session/route.ts`：受保护 demo 接口。
+- `components/auth-actions.tsx`：登录/退出按钮。
+- `app/page.tsx`：首页展示。
