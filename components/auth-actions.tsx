@@ -3,22 +3,32 @@
 import { useTransition } from "react";
 import { signIn, signOut } from "next-auth/react";
 
-type AuthActionButtonProps = {
+type AuthProviderButtonProps = {
+  mode?: "link" | "signin";
+  provider: {
+    id: string;
+    name: string;
+  };
   callbackUrl?: string;
 };
 
-export function GoogleSignInButton({
+export function ProviderAuthButton({
   callbackUrl = "/",
-}: AuthActionButtonProps): React.JSX.Element {
+  mode = "signin",
+  provider,
+}: AuthProviderButtonProps): React.JSX.Element {
   const [isPending, startTransition] = useTransition();
 
   const handleSignIn = (): void => {
     startTransition(() => {
-      void signIn("google", {
+      void signIn(provider.id, {
         callbackUrl,
       });
     });
   };
+
+  const buttonLabel =
+    mode === "link" ? `绑定 ${provider.name}` : `使用 ${provider.name} 登录`;
 
   return (
     <button
@@ -27,14 +37,16 @@ export function GoogleSignInButton({
       disabled={isPending}
       className="inline-flex h-12 items-center justify-center rounded-full bg-white px-5 text-sm font-semibold text-slate-950 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-60"
     >
-      {isPending ? "跳转中..." : "使用 Google 登录"}
+      {isPending ? "跳转中..." : buttonLabel}
     </button>
   );
 }
 
 export function SignOutButton({
   callbackUrl = "/",
-}: AuthActionButtonProps): React.JSX.Element {
+}: {
+  callbackUrl?: string;
+}): React.JSX.Element {
   const [isPending, startTransition] = useTransition();
 
   const handleSignOut = (): void => {

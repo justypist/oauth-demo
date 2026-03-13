@@ -1,18 +1,21 @@
 import Image from "next/image";
+import Link from "next/link";
 import { getServerSession } from "next-auth";
 
-import { GoogleSignInButton, SignOutButton } from "@/components/auth-actions";
-import { authOptions, isGoogleOAuthConfigured } from "@/lib/auth";
-
-const requiredEnvNames = [
-  "GOOGLE_CLIENT_ID",
-  "GOOGLE_CLIENT_SECRET",
-  "NEXTAUTH_SECRET",
-  "NEXTAUTH_URL",
-] as const;
+import { ProviderAuthButton, SignOutButton } from "@/components/auth-actions";
+import { getAccountCenterSummary } from "@/lib/account";
+import { authOptions, isAuthConfigured } from "@/lib/auth";
+import {
+  authBaseEnvNames,
+  enabledAuthProviders,
+  supportedAuthProviders,
+} from "@/lib/auth-providers";
 
 export default async function Home(): Promise<React.JSX.Element> {
   const session = await getServerSession(authOptions);
+  const accountSummary = session?.user?.id
+    ? await getAccountCenterSummary(session.user.id)
+    : null;
   const sessionJson = session ? JSON.stringify(session, null, 2) : null;
 
   return (
@@ -22,31 +25,48 @@ export default async function Home(): Promise<React.JSX.Element> {
           <div className="flex flex-col gap-8 lg:flex-row lg:items-end lg:justify-between">
             <div className="max-w-2xl space-y-5">
               <p className="text-sm font-medium uppercase tracking-[0.32em] text-sky-200/80">
-                Google OAuth Demo
+                Local Account Demo
               </p>
               <h1 className="text-4xl font-semibold tracking-tight text-white sm:text-5xl">
-                基于 Next.js App Router 的 Google 登录示例
+                基于 Next.js + Drizzle 的本地账号系统示例
               </h1>
               <p className="max-w-xl text-base leading-7 text-slate-200 sm:text-lg">
-                当前实现使用 next-auth，登录后会直接回到首页，并在服务端读取会话信息。
+                当前实现已经接入 PostgreSQL 本地用户库。第三方登录成功后，会落本地用户表和账号绑定表；后续在已登录状态下继续 OAuth，可把多个平台挂到同一个本地账号。
                 你也可以访问
                 <code className="mx-1 rounded bg-white/10 px-2 py-1 text-sm text-sky-100">
                   /api/demo/session
                 </code>
-                验证受保护接口。
+                和
+                <code className="mx-1 rounded bg-white/10 px-2 py-1 text-sm text-sky-100">
+                  /api/account/links
+                </code>
+                验证当前会话与绑定关系。
               </p>
             </div>
 
             <div className="flex flex-wrap items-center gap-3">
-              {isGoogleOAuthConfigured ? (
+              {isAuthConfigured ? (
                 session ? (
-                  <SignOutButton />
+                  <>
+                    <Link
+                      href="/account"
+                      className="inline-flex h-12 items-center justify-center rounded-full bg-white px-5 text-sm font-semibold text-slate-950 transition hover:bg-slate-100"
+                    >
+                      账号中心
+                    </Link>
+                    <SignOutButton />
+                  </>
                 ) : (
-                  <GoogleSignInButton />
+                  enabledAuthProviders.map((provider) => (
+                    <ProviderAuthButton
+                      key={provider.id}
+                      provider={provider}
+                    />
+                  ))
                 )
               ) : (
                 <span className="rounded-full border border-amber-300/30 bg-amber-300/10 px-4 py-3 text-sm text-amber-100">
-                  先配置环境变量后再启用登录
+                  先完成数据库和 OAuth 环境变量配置
                 </span>
               )}
             </div>
@@ -92,10 +112,38 @@ export default async function Home(): Promise<React.JSX.Element> {
                       {session.user?.email ?? "未返回邮箱"}
                     </p>
                     <p className="text-xs text-slate-400">
+                      本地用户 ID：{session.user.id}
+                    </p>
+                    <p className="text-xs text-slate-400">
+                      角色 / 状态：{session.user.role} / {session.user.status}
+                    </p>
+                    <p className="text-xs text-slate-400">
                       Session 过期时间：{session.expires}
                     </p>
                   </div>
                 </div>
+
+                {accountSummary ? (
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <div className="rounded-3xl border border-white/10 bg-white/[0.04] p-5">
+                      <p className="text-xs uppercase tracking-[0.2em] text-slate-400">
+                        Linked Providers
+                      </p>
+                      <p className="mt-3 text-3xl font-semibold text-white">
+                        {accountSummary.linkedAccounts.length}
+                      </p>
+                    </div>
+
+                    <div className="rounded-3xl border border-white/10 bg-white/[0.04] p-5">
+                      <p className="text-xs uppercase tracking-[0.2em] text-slate-400">
+                        Account Created
+                      </p>
+                      <p className="mt-3 text-sm leading-7 text-slate-200">
+                        {new Date(accountSummary.user.createdAt).toLocaleString("zh-CN")}
+                      </p>
+                    </div>
+                  </div>
+                ) : null}
 
                 <div className="overflow-hidden rounded-3xl border border-white/10 bg-black/30">
                   <div className="border-b border-white/10 px-4 py-3 text-sm text-slate-300">
@@ -115,12 +163,12 @@ export default async function Home(): Promise<React.JSX.Element> {
 
           <aside className="space-y-6">
             <div className="rounded-[28px] border border-white/10 bg-white/[0.06] p-6">
-              <h2 className="text-xl font-semibold text-white">环境变量</h2>
+              <h2 className="text-xl font-semibold text-white">基础环境变量</h2>
               <p className="mt-2 text-sm leading-7 text-slate-300">
-                本 demo 依赖下面四项配置。缺少任意一项时，页面只展示说明，不会触发登录。
+                缺少下面任意一项，数据库会话和账号绑定都无法工作。
               </p>
               <ul className="mt-4 space-y-3 text-sm text-slate-200">
-                {requiredEnvNames.map((name) => (
+                {authBaseEnvNames.map((name) => (
                   <li
                     key={name}
                     className="rounded-2xl border border-white/10 bg-slate-950/40 px-4 py-3 font-mono"
@@ -132,9 +180,35 @@ export default async function Home(): Promise<React.JSX.Element> {
             </div>
 
             <div className="rounded-[28px] border border-sky-300/10 bg-sky-300/[0.08] p-6">
-              <h2 className="text-xl font-semibold text-white">回调地址</h2>
+              <h2 className="text-xl font-semibold text-white">平台配置状态</h2>
+              <div className="mt-4 space-y-3">
+                {supportedAuthProviders.map((provider) => (
+                  <div
+                    key={provider.id}
+                    className="rounded-2xl bg-slate-950/60 px-4 py-3"
+                  >
+                    <div className="flex items-center justify-between gap-3">
+                      <span className="font-medium text-white">{provider.name}</span>
+                      <span
+                        className={`text-xs uppercase tracking-[0.2em] ${
+                          provider.enabled ? "text-sky-100" : "text-slate-400"
+                        }`}
+                      >
+                        {provider.enabled ? "enabled" : "disabled"}
+                      </span>
+                    </div>
+                    <code className="mt-2 block text-xs text-slate-300">
+                      {provider.requiredEnvNames.join(", ")}
+                    </code>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="rounded-[28px] border border-sky-300/10 bg-sky-300/[0.08] p-6">
+              <h2 className="text-xl font-semibold text-white">OAuth 回调地址</h2>
               <p className="mt-2 text-sm leading-7 text-slate-200">
-                开发环境请在 Google Cloud Console 中添加下面这个 redirect URI：
+                开发环境下，Google 至少需要配置下面这个 redirect URI。后续加其他平台时，也按同样模式增加即可。
               </p>
               <code className="mt-4 block rounded-2xl bg-slate-950/70 px-4 py-3 text-sm text-sky-100">
                 http://localhost:3000/api/auth/callback/google
@@ -148,7 +222,11 @@ export default async function Home(): Promise<React.JSX.Element> {
                 <code className="mx-1 rounded bg-white/10 px-2 py-1 text-xs text-sky-100">
                   /api/demo/session
                 </code>
-                ，未登录会返回 401，已登录会返回当前 session。
+                或
+                <code className="mx-1 rounded bg-white/10 px-2 py-1 text-xs text-sky-100">
+                  /api/account/links
+                </code>
+                ，未登录会返回 401，已登录会返回当前 session 和绑定关系。
               </p>
             </div>
           </aside>
