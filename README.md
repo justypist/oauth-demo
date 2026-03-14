@@ -17,6 +17,100 @@ pnpm dev
 
 默认打开 `http://localhost:3000`。
 
+## CI
+
+仓库内已经添加 GitHub Actions CI，配置文件在 `.github/workflows/ci.yml`。
+
+触发条件：
+
+- `pull_request`
+- 推送到 `main`
+
+执行内容：
+
+- `pnpm install --frozen-lockfile`
+- `pnpm lint`
+- `pnpm typecheck`
+- `pnpm build`
+
+## Docker Compose
+
+先准备环境变量：
+
+```bash
+cp .env.example .env
+```
+
+然后至少填写这些值：
+
+```bash
+GOOGLE_CLIENT_ID=你的_google_client_id
+GOOGLE_CLIENT_SECRET=你的_google_client_secret
+NEXTAUTH_SECRET=自己生成的长随机字符串
+NEXTAUTH_URL=http://localhost:3000
+```
+
+`compose.yaml` 会自动把容器内 `DATABASE_URL` 指向 `db` 服务，不需要手工改成容器地址。
+
+启动：
+
+```bash
+docker compose up -d --build
+```
+
+首次建表：
+
+```bash
+docker compose exec app pnpm db:push
+```
+
+查看日志：
+
+```bash
+docker compose logs -f app
+```
+
+停止：
+
+```bash
+docker compose down
+```
+
+如果连数据库数据一起删除：
+
+```bash
+docker compose down -v
+```
+
+## 推送到 GHCR
+
+先登录：
+
+```bash
+echo "$GHCR_TOKEN" | docker login ghcr.io -u justypist --password-stdin
+```
+
+构建并打标签：
+
+```bash
+export APP_IMAGE=ghcr.io/justypist/google-oauth-demo:latest
+docker compose build app
+```
+
+推送：
+
+```bash
+docker compose push app
+```
+
+如果要打版本号：
+
+```bash
+export APP_IMAGE=ghcr.io/justypist/google-oauth-demo:v0.1.0
+docker compose build app
+docker compose push app
+```
+
 ## 当前本地开发数据库
 
 - 数据库：`google_oauth_demo_dev`
