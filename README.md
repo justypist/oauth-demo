@@ -58,11 +58,7 @@ NEXTAUTH_URL=http://localhost:3000
 docker compose up -d --build
 ```
 
-首次建表：
-
-```bash
-docker compose exec app pnpm db:push
-```
+`app` 容器启动时会自动执行 `pnpm db:push` 同步 schema，再启动 Next.js 服务。
 
 查看日志：
 
