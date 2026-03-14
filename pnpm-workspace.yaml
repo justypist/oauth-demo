@@ -1,3 +1,35 @@
 ignoredBuiltDependencies:
   - sharp
   - unrs-resolver
+onlyBuiltDependencies:
+  - ' '
+  - "'"
+  - ','
+  - '-'
+  - /
+  - '2'
+  - '3'
+  - '@'
+  - '['
+  - ']'
+  - a
+  - b
+  - c
+  - d
+  - e
+  - esbuild
+  - f
+  - g
+  - h
+  - i
+  - j
+  - l
+  - m
+  - n
+  - o
+  - p
+  - q
+  - r
+  - s
+  - t
+  - u
