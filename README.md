@@ -84,7 +84,28 @@ docker compose down -v
 
 ## 推送到 GHCR
 
-先登录：
+仓库内已经添加自动发布工作流，配置文件在 `.github/workflows/docker-publish.yml`。
+
+触发条件：
+
+- 手动触发 `workflow_dispatch`
+- 推送到 `main`
+- 推送 `v*` tag，例如 `v0.1.0`
+
+执行内容：
+
+- 使用仓库根目录 `Dockerfile` 构建镜像
+- 登录 `ghcr.io`
+- 推送到 `ghcr.io/<owner>/<repo>`
+- 自动生成这些 tag：
+  - `latest`，仅默认分支
+  - 分支名
+  - Git tag 名
+  - commit sha
+
+默认使用 `GITHUB_TOKEN` 推送，不需要额外的 GHCR Token，但仓库 Actions 需要有包写入权限。
+
+如果要手工推送，先登录：
 
 ```bash
 echo "$GHCR_TOKEN" | docker login ghcr.io -u justypist --password-stdin
